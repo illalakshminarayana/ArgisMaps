@@ -1,0 +1,223 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distance Between Postal Codes</title>
+<link rel="stylesheet"  href="https://js.arcgis.com/4.21/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.21/"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(to bottom right, #add8e6, #d4af37); /* Light blue to metallic golden */
+            position: relative;
+        }
+        .output-box {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .input-group label {
+            flex: 1;
+            margin-right: 10px;
+        }
+        .input-group input[type="text"] {
+            flex: 2;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .logo {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 150px;
+        }
+    </style>
+    
+</head>
+<body>
+    <div class="container">
+        <img src="https://www.cleanharbors.com/sites/g/files/bdczcs356/files/amazon_form_images/CleanHarborsLogo_40years_0.png" alt="Clean Harbors Logo" class="logo">
+        <h1>Distance Between Postal Codes/Address</h1>
+        <form id="distanceForm">
+            <div class="input-group">
+                <label for="postalCode1">Source Zipcode/Address:</label>
+                <input type="text" id="postalCode1" required>
+            </div>
+            <div class="input-group">
+                <label for="postalCode2">Destination Zipcode/Address:</label>
+                <input type="text" id="postalCode2" required>
+            </div>
+            <button type="submit">Calculate Distance</button>
+        </form>
+        <div id="result" class="output-box"></div>
+        <div id="map"></div>
+    </div>
+
+    <script>
+        const apiKey = 'AAPKc992ccc4802d427e9a781f6e8e86e9b2bcXnJvzxwGcaldMJHmCqHH4hKNTrNjS-bd7y0v3AQCfiWiaSOKKqj1WjjStnj_BI';  // Your API key
+        const geocodeUrl = 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates';
+        const routeUrl = 'https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World/solve';
+
+        document.getElementById('postalCode1').addEventListener('input', function() {
+            fetchSuggestions(this.value, 'postalCode1');
+        });
+
+        document.getElementById('postalCode2').addEventListener('input', function() {
+            fetchSuggestions(this.value, 'postalCode2');
+        });
+
+        function fetchSuggestions(query, elementId) {
+            fetch(`${geocodeUrl}?SingleLine=${query}&f=json&token=${apiKey}`)
+                .then(response => response.json())
+                .then(data => {
+                    const suggestions = data.candidates.map(candidate => candidate.address);
+                    const datalist = document.createElement('datalist');
+                    datalist.id = `${elementId}-suggestions`;
+                    suggestions.forEach(suggestion => {
+                        const option = document.createElement('option');
+                        option.value = suggestion;
+                        datalist.appendChild(option);
+                    });
+                    document.getElementById(elementId).setAttribute('list', datalist.id);
+                    document.body.appendChild(datalist);
+                })
+                .catch(error => console.error('Error fetching suggestions:', error));
+        }
+
+        document.getElementById('distanceForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const postalCode1 = document.getElementById('postalCode1').value;
+            const postalCode2 = document.getElementById('postalCode2').value;
+
+            Promise.all([
+                fetch(`${geocodeUrl}?SingleLine=${postalCode1}&f=json&token=${apiKey}`).then(response => response.json()),
+                fetch(`${geocodeUrl}?SingleLine=${postalCode2}&f=json&token=${apiKey}`).then(response => response.json())
+            ]).then(([response1, response2]) => {
+                console.log('Geocode Response 1:', response1);
+                console.log('Geocode Response 2:', response2);
+
+                if (response1.candidates.length === 0 || response2.candidates.length === 0) {
+                    throw new Error('Invalid postal code(s). Please check the input.');
+                }
+
+                const coords1 = response1.candidates[0].location;
+                const coords2 = response2.candidates[0].location;
+
+                const stops = `${coords1.x},${coords1.y};${coords2.x},${coords2.y}`;
+                const routeParams = new URLSearchParams({
+                    f: 'json',
+                    token: apiKey,
+                    stops: stops,
+                    startTime: 'now',
+                    returnDirections: 'true',
+                    directionsLanguage: 'en'
+                });
+
+                return fetch(`${routeUrl}?${routeParams.toString()}`).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Route request failed: ${response.statusText}`);
+                    }
+                    return response.json();
+                }).then(routeResponse => {
+                    console.log('Route Response:', routeResponse);
+
+                    if (!routeResponse.routes || !routeResponse.routes.features || routeResponse.routes.features.length === 0) {
+                        throw new Error('No route found. Please check the input and try again.');
+                    }
+
+                    const distance = routeResponse.routes.features[0].attributes.Total_Miles.toFixed(2);
+                    document.getElementById('result').innerHTML = `The distance between Source and Destination is <strong>${distance} miles</strong>.`;
+
+                    // Display the map
+                    require(["esri/Map", "esri/views/MapView", "esri/Graphic", "esri/layers/GraphicsLayer"], function(Map, MapView, Graphic, GraphicsLayer) {
+                        const map = new Map({
+                            basemap: "streets-navigation-vector"
+                        });
+
+                        const view = new MapView({
+                            container: "map",
+                            map: map,
+                            center: [(coords1.x + coords2.x) / 2, (coords1.y + coords2.y) / 2],
+                            zoom: 10
+                        });
+debugger;
+                        const graphicsLayer = new GraphicsLayer();
+                        map.add(graphicsLayer);
+
+                        const routeGraphic = new Graphic({
+                            geometry: {
+                                type: "polyline",
+                                paths: routeResponse.routes.features[0].geometry.paths
+                            },
+                            symbol: {
+                                type: "simple-line",
+                                color: [0, 0, 255],
+                                width: 3
+                            }
+                        });
+
+                        const sourceGraphic = new Graphic({
+                            geometry: {
+                                type: "point",
+                                longitude: coords1.x,
+                                latitude: coords1.y
+                            },
+                            symbol: {
+                                type: "simple-marker",
+                                color: "red",
+                                size: 8
+                            }
+                        });
+
+                        const destinationGraphic = new Graphic({
+                            geometry: {
+                                type: "point",
+                                longitude: coords2.x,
+                                latitude: coords2.y
+                            },
+                            symbol: {
+                                type: "simple-marker",
+                                color: "green",
+                                size: 8
+                            }
+                        });
+
+                        graphicsLayer.add(routeGraphic);
+                        graphicsLayer.add(sourceGraphic);
+                        graphicsLayer.add(destinationGraphic);
+                    });
+                });
+            }).catch(error => {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = `An error occurred: ${error.message}. Please try again.`;
+            });
+        });
+    </script>
+</body>
+</html>
