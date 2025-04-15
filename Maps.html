@@ -171,7 +171,7 @@
         return fetch(`${routeUrl}?${routeParams}`).then(r => r.json()).then(routeData => {
           const route = routeData.routes.features[0];
           const distance = route.attributes.Total_Miles.toFixed(2);
-          document.getElementById('result').innerHTML = `Distance: <strong>${distance} miles</strong>`;
+          document.getElementById('result').innerHTML = `The distance between Source and Destination is: <strong>${distance} miles</strong>`;
           showMap(route.geometry.paths, coords1, coords2);
         });
       }).catch(err => {
