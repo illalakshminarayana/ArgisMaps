@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta http-equiv="cache-control" content="no-cache">
-<meta http-equiv="expires" content="0">
-<meta http-equiv="pragma" content="no-cache">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Distance Between Postal Codes</title>
@@ -13,7 +10,7 @@
       font-family: Arial, sans-serif;
     }
     .container {
-      max-width: 800px;
+      max-width: 1000px;
       margin: 0 auto;
       padding: 20px;
       border: 1px solid #ccc;
@@ -30,11 +27,10 @@
       background-color: #f9f9f9;
     }
     #map {
-      height: 400px;
+      height: 500px;
       width: 100%;
       margin-top: 20px;
       border-radius: 10px;
-      overflow: hidden;
     }
     .input-group {
       display: flex;
@@ -57,22 +53,16 @@
       left: 10px;
       width: 150px;
     }
-    .button-group {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .button-group button {
-      padding: 8px 16px;
+    button {
+      padding: 10px 20px;
       border: none;
       border-radius: 5px;
-      background-color: #004aad;
-      color: white;
       cursor: pointer;
-      transition: background-color 0.3s;
     }
-    .button-group button:hover {
-      background-color: #00337f;
+    #calculateButton {
+      background-color: blue;
+      color: white;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -82,81 +72,52 @@
     <h1>Distance Between Postal Codes/Address</h1>
     <form id="distanceForm">
       <div class="input-group">
-        <label for="postalCode1">Source Zipcode/Address:</label>
+        <label for="postalCode1">Source Address:</label>
         <input type="text" id="postalCode1" required />
       </div>
       <div class="input-group">
-        <label for="postalCode2">Destination Zipcode/Address:</label>
+        <label for="postalCode2">Stop 1 Address:</label>
         <input type="text" id="postalCode2" required />
       </div>
-      <div class="button-group">
-        <button type="submit">Calculate Distance</button>
-      </div>
+      <div id="additionalAddresses"></div>
+      <button type="button" onclick="addAddressField()">Add Another Stop</button>
+      <button type="submit" id="calculateButton">Calculate Distance</button>
     </form>
     <div id="result" class="output-box"></div>
     <div id="map"></div>
   </div>
-
   <script src="https://js.arcgis.com/4.21/"></script>
   <script>
     const apiKey = 'AAPKc992ccc4802d427e9a781f6e8e86e9b2bcXnJvzxwGcaldMJHmCqHH4hKNTrNjS-bd7y0v3AQCfiWiaSOKKqj1WjjStnj_BI';
     const geocodeUrl = 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates';
     const routeUrl = 'https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World/solve';
+    let addressCount = 2;
 
-    // Listen for user input to fetch address suggestions
-    document.getElementById('postalCode1').addEventListener('input', function () {
-      fetchSuggestions(this.value, 'postalCode1');
-    });
-
-    document.getElementById('postalCode2').addEventListener('input', function () {
-      fetchSuggestions(this.value, 'postalCode2');
-    });
-
-    function fetchSuggestions(query, elementId) {
-      const existingDatalist = document.getElementById(`${elementId}-suggestions`);
-      if (existingDatalist) {
-        existingDatalist.remove();  // Clear previous suggestions
-      }
-
-      if (query.length < 3) return; // Wait until at least 3 characters are typed
-
-      fetch(`${geocodeUrl}?SingleLine=${encodeURIComponent(query)}&f=json&token=${apiKey}`)
-        .then(response => response.json())
-        .then(data => {
-          const suggestions = data.candidates.map(candidate => candidate.address);
-          if (suggestions.length === 0) return;
-
-          // Create and append new datalist
-          const datalist = document.createElement('datalist');
-          datalist.id = `${elementId}-suggestions`;
-          suggestions.forEach(address => {
-            const option = document.createElement('option');
-            option.value = address;
-            datalist.appendChild(option);
-          });
-          document.getElementById(elementId).setAttribute('list', datalist.id);
-          document.body.appendChild(datalist);
-        })
-        .catch(error => console.error('Error fetching address suggestions:', error));
+    function addAddressField() {
+      addressCount++;
+      const newInputGroup = document.createElement('div');
+      newInputGroup.className = 'input-group';
+      newInputGroup.innerHTML = `
+        <label for="postalCode${addressCount}">Stop ${addressCount - 1} Address:</label>
+        <input type="text" id="postalCode${addressCount}" required />
+      `;
+      document.getElementById('additionalAddresses').appendChild(newInputGroup);
     }
 
-    // Handle form submission to calculate the distance
     document.getElementById('distanceForm').addEventListener('submit', function (event) {
       event.preventDefault();
+      const addresses = [];
+      for (let i = 1; i <= addressCount; i++) {
+        addresses.push(document.getElementById(`postalCode${i}`).value);
+      }
 
-      const postalCode1 = document.getElementById('postalCode1').value;
-      const postalCode2 = document.getElementById('postalCode2').value;
+      const geocodePromises = addresses.map(address => 
+        fetch(`${geocodeUrl}?SingleLine=${encodeURIComponent(address)}&f=json&token=${apiKey}`).then(res => res.json())
+      );
 
-      Promise.all([
-        fetch(`${geocodeUrl}?SingleLine=${encodeURIComponent(postalCode1)}&f=json&token=${apiKey}`).then(res => res.json()),
-        fetch(`${geocodeUrl}?SingleLine=${encodeURIComponent(postalCode2)}&f=json&token=${apiKey}`).then(res => res.json())
-      ]).then(([res1, res2]) => {
-        if (!res1.candidates.length || !res2.candidates.length) throw new Error('Invalid addresses.');
-
-        const coords1 = res1.candidates[0].location;
-        const coords2 = res2.candidates[0].location;
-
-        const stops = `${coords1.x},${coords1.y};${coords2.x},${coords2.y}`;
+      Promise.all(geocodePromises).then(results => {
+        const coords = results.map(res => res.candidates[0].location);
+        const stops = coords.map(coord => `${coord.x},${coord.y}`).join(';');
         const routeParams = new URLSearchParams({
           f: 'json',
           token: apiKey,
@@ -171,15 +132,15 @@
         return fetch(`${routeUrl}?${routeParams}`).then(r => r.json()).then(routeData => {
           const route = routeData.routes.features[0];
           const distance = route.attributes.Total_Miles.toFixed(2);
-          document.getElementById('result').innerHTML = `The distance between Source and Destination is: <strong>${distance} miles</strong>`;
-          showMap(route.geometry.paths, coords1, coords2);
+          document.getElementById('result').innerHTML = `Distance: <strong>${distance} miles</strong>`;
+          showMap(route.geometry.paths, coords);
         });
       }).catch(err => {
         document.getElementById('result').innerHTML = `Error: ${err.message}`;
       });
     });
 
-    function showMap(paths, coords1, coords2) {
+    function showMap(paths, coords) {
       require([
         "esri/Map",
         "esri/views/MapView",
@@ -190,36 +151,34 @@
         const map = new Map({
           basemap: "streets-navigation-vector"
         });
-
         const view = new MapView({
           container: "map",
           map: map
         });
-
         const graphicsLayer = new GraphicsLayer();
         map.add(graphicsLayer);
-
         const routeLine = new Polyline({
           paths: paths,
           spatialReference: { wkid: 4326 }
         });
-
         const routeGraphic = new Graphic({
           geometry: routeLine,
           symbol: { type: "simple-line", color: [0, 0, 255], width: 3 }
         });
+        graphicsLayer.add(routeGraphic);
 
-        const sourceGraphic = new Graphic({
-          geometry: { type: "point", longitude: coords1.x, latitude: coords1.y },
-          symbol: { type: "simple-marker", color: "red", size: 8 }
+        coords.forEach((coord, index) => {
+          const markerGraphic = new Graphic({
+            geometry: { type: "point", longitude: coord.x, latitude: coord.y },
+            symbol: {
+              type: "text",
+              color: "red",
+              text: (index + 1).toString(),
+              font: { size: 12, weight: "bold" }
+            }
+          });
+          graphicsLayer.add(markerGraphic);
         });
-
-        const destGraphic = new Graphic({
-          geometry: { type: "point", longitude: coords2.x, latitude: coords2.y },
-          symbol: { type: "simple-marker", color: "green", size: 8 }
-        });
-
-        graphicsLayer.addMany([routeGraphic, sourceGraphic, destGraphic]);
 
         view.when(() => {
           view.goTo({ target: routeLine, padding: 50 });
