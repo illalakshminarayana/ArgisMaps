@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live IST & EST/EDT Clocks + Converter</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: #f5f7fa;
+      color: #000;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    label,
+    .time,
+    .date,
+    .result,
+    select,
+    option,
+    input,
+    button {
+      color: #000 !important;
+    }
+
+    .glass-container {
+      background: #fff;
+      border-radius: 20px;
+      padding: 40px 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+      text-align: center;
+      width: 100%;
+      max-width: 900px;
+      border: 1px solid #e0e0e0;
+      animation: fadeIn 1s ease;
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+      color: #000;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 {
+      margin-bottom: 25px;
+      font-weight: 700;
+      font-size: 28px;
+      user-select: none;
+      flex-basis: 100%;
+      color: #000;
+    }
+
+    .clocks {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1 1 300px;
+    }
+
+    .clock-box {
+      background: #f5f7fa;
+      padding: 25px 20px 30px;
+      border-radius: 12px;
+      width: 280px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      transition: background 0.3s ease;
+      user-select: none;
+      color: #000;
+    }
+
+    .clock-box:hover {
+      background: #e2e6ef;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .clock-box h3 {
+      margin: 0 0 12px 0;
+      font-size: 20px;
+      color: #000;
+    }
+
+    .time {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+      color: #000;
+    }
+
+    .date {
+      font-size: 14px;
+      color: #000;
+      font-weight: 500;
+      font-style: italic;
+    }
+
+    .converter {
+      flex: 1 1 320px;
+      background: #f5f7fa;
+      border-radius: 12px;
+      padding: 30px 25px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      color: #000;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      min-width: 280px;
+    }
+
+    .converter h1 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: #000;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    select,
+    label {
+      background-color: #e2e6ef;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #000;
+      font-size: 14px;
+      font-weight: 500;
+      appearance: none;
+      cursor: pointer;
+      user-select: none;
+      min-width: 140px;
+      text-align: center;
+      transition: background-color 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    select:hover,
+    label:hover {
+      background-color: #d3d8e8;
+    }
+
+    select option {
+      background-color: #fff;
+      color: #000;
+    }
+
+    input[type="time"] {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      font-size: 16px;
+      background: #e2e6ef;
+      color: #000;
+      margin-bottom: 20px;
+      outline: none;
+      user-select: text;
+      transition: background-color 0.3s ease;
+    }
+
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      filter: invert(0);
+      cursor: pointer;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(to right, #00c9ff, #92fe9d);
+      color: #000;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      user-select: none;
+      letter-spacing: 1px;
+      box-shadow: none;
+    }
+
+    button:hover {
+      transform: scale(1.04);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .result {
+      margin-top: auto;
+      font-size: 18px;
+      font-weight: 600;
+      color: #000;
+      min-height: 28px;
+      user-select: none;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #e0e0e0;
+      margin: 25px 0 0 0;
+      user-select: none;
+      width: 100%;
+    }
+
+    @media (max-width: 880px) {
+      .glass-container {
+        flex-direction: column;
+        max-width: 95vw;
+        padding: 25px 15px;
+      }
+
+      .clocks,
+      .converter {
+        width: 100%;
+        max-width: none;
+      }
+
+      .clock-box {
+        width: 100%;
+      }
+    }
+
+    .vertical-divider {
+      width: 2px;
+      background: #e0e0e0;
+      margin: 0 30px;
+      border-radius: 2px;
+      min-height: 400px;
+      align-self: stretch;
+    }
+
+    @media (max-width: 880px) {
+      .vertical-divider {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="glass-container">
+    <div class="clocks">
+      <h1>Live Clocks</h1>
+      <div class="clock-box">
+        <h3>Current Time in IST</h3>
+        <div class="time" id="clockIST">--:--:--</div>
+        <div class="date" id="dateIST">Loading...</div>
+      </div>
+      <div class="clock-box">
+        <h3>Current Time in EST/EDT</h3>
+        <div class="time" id="clockEST">--:--:--</div>
+        <div class="date" id="dateEST">Loading...</div>
+      </div>
+      <label>
+        <input type="checkbox" id="amPmToggle" checked />
+        Use AM/PM (12h) format
+      </label>
+    </div>
+
+    <div class="vertical-divider"></div>
+
+    <div class="converter">
+      <h1>Time Zone Converter</h1>
+      <div class="controls">
+        <select id="conversionDirection" title="Select conversion direction">
+          <option value="ISTtoEST">IST → EST/EDT</option>
+          <option value="ESTtoIST">EST/EDT → IST</option>
+        </select>
+        <label>
+          <input type="checkbox" id="formatToggle" />
+          24-Hour Format
+        </label>
+      </div>
+      <input type="time" id="timeInput" title="Select time" />
+      <button onclick="convertTime()">Convert</button>
+      <div class="result" id="conversionResult">🕒 Result will appear here</div>
+    </div>
+  </div>
+
+  <script>
+    const clockIST = document.getElementById("clockIST");
+    const dateIST = document.getElementById("dateIST");
+    const clockEST = document.getElementById("clockEST");
+    const dateEST = document.getElementById("dateEST");
+
+    // Update clocks every second
+    function updateClocks() {
+      const now = new Date();
+      const use12h = document.getElementById('amPmToggle').checked;
+
+      // IST time using Intl
+      const optionsTime = { timeZone: 'Asia/Kolkata', hour12: use12h, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      const optionsDate = { timeZone: 'Asia/Kolkata', weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+      const timeIST = now.toLocaleTimeString('en-US', optionsTime);
+      const dateStrIST = now.toLocaleDateString('en-US', optionsDate);
+      clockIST.textContent = timeIST;
+      dateIST.textContent = dateStrIST;
+
+      // EST/EDT time using Intl
+      const optionsTimeEST = { timeZone: 'America/New_York', hour12: use12h, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      const optionsDateEST = { timeZone: 'America/New_York', weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+      const timeEST = now.toLocaleTimeString('en-US', optionsTimeEST);
+      const dateStrEST = now.toLocaleDateString('en-US', optionsDateEST);
+      clockEST.textContent = timeEST;
+      dateEST.textContent = dateStrEST;
+    }
+
+    setInterval(updateClocks, 1000);
+    updateClocks(); // initial call
+
+    // Time conversion function (using correct TZ offsets)
+    function convertTime() {
+      const timeInput = document.getElementById("timeInput").value;
+      const direction = document.getElementById("conversionDirection").value;
+      const use24h = document.getElementById("formatToggle").checked;
+      const resultDiv = document.getElementById("conversionResult");
+
+      if (!timeInput) {
+        resultDiv.innerText = "⏳ Please select a time.";
+        return;
+      }
+
+      const [inputHours, inputMinutes] = timeInput.split(":").map(Number);
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const date = now.getDate();
+
+      // Source and target timezones
+      const sourceTZ = direction === "ISTtoEST" ? "Asia/Kolkata" : "America/New_York";
+      const targetTZ = direction === "ISTtoEST" ? "America/New_York" : "Asia/Kolkata";
+
+      // Create a date in local system time (this will be "wrong" but we will fix)
+      const localDate = new Date(year, month, date, inputHours, inputMinutes, 0);
+
+      // Get source TZ offset from UTC in ms
+      const sourceOffsetMs = getTimezoneOffset(localDate, sourceTZ);
+
+      // UTC time in ms
+      const utcMs = localDate.getTime() - sourceOffsetMs;
+
+      // Date object representing UTC time
+      const utcDateObj = new Date(utcMs);
+
+      // Format in target timezone
+      const options = {
+        timeZone: targetTZ,
+        hour12: !use24h,
+        hour: '2-digit',
+        minute: '2-digit',
+      };
+
+      const targetTimeStr = utcDateObj.toLocaleTimeString('en-US', options);
+
+      const targetZoneLabel = direction === "ISTtoEST" ? "EST/EDT" : "IST";
+
+      resultDiv.innerText = `🕒 ${targetZoneLabel} Time: ${targetTimeStr}`;
+    }
+
+    // Helper function to get offset (ms) between local date and same date in given timezone
+    function getTimezoneOffset(date, timeZone) {
+      const dtf = new Intl.DateTimeFormat('en-US', {
+        hour12: false,
+        timeZone,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      });
+      const parts = dtf.formatToParts(date);
+      const map = {};
+      for (const { type, value } of parts) {
+        map[type] = value;
+      }
+      // Construct a date string from parts
+      const tzDateStr = `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}:${map.second}`;
+      const tzDate = new Date(tzDateStr);
+
+      // Offset in ms = local date - tzDate
+      return date.getTime() - tzDate.getTime();
+    }
+  </script>
+</body>
+
+</html>
